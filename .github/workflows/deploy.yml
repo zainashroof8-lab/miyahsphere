@@ -1,0 +1,56 @@
+# .github/workflows/deploy.yml
+name: Deploy Vite site to GitHub Pages
+
+on:
+  # Triggers the workflow on pushes to the main branch
+  push:
+    branches: ["main"]
+  # Allows you to run the workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Grant GitHub Actions permissions to write content (for deployment)
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    # Set environment for the build process
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (Version 18)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm # Use caching for faster dependency installs
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project (runs 'npm run build')
+        # This executes the build command defined in your package.json
+        run: npm run build
+
+      - name: Upload artifact (CRITICAL STEP)
+        uses: actions/upload-pages-artifact@v2
+        with:
+          # This MUST match the custom 'outDir: dist/public' from your vite.config.ts
+          path: dist/public 
+
+  deploy:
+    # This job waits for the 'build' job to complete successfully
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      # Specifies the deployment environment (used for security/tracking)
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        # Uses the official GitHub Pages action to deploy the uploaded artifact
+        uses: actions/deploy-pages@v3
